@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>PNG → 엔트리용 색상 코드 (#포맷)</title>
+</head>
+<body>
+<h2>PNG 파일을 선택하세요</h2>
+<input type="file" id="fileInput" accept="image/png">
+<pre id="output" style="max-height:500px; overflow:auto; background:#f0f0f0;"></pre>
+
+<script>
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = function(evt) {
+        img.src = evt.target.result;
+    };
+
+    img.onload = function() {
+        const W = img.width;
+        const H = img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        let result = `W=${W};H=${H};\n`;
+        for (let y = 0; y < H; y++) {
+            let row = [];
+            for (let x = 0; x < W; x++) {
+                const p = ctx.getImageData(x, y, 1, 1).data;
+                const hex = '#' + 
+                    p[0].toString(16).padStart(2,'0') +
+                    p[1].toString(16).padStart(2,'0') +
+                    p[2].toString(16).padStart(2,'0');
+                row.push(hex.toUpperCase());
+            }
+            result += row.join(' ') + '\n';
+        }
+
+        document.getElementById('output').textContent = result;
+    };
+
+    reader.readAsDataURL(file);
+});
+</script>
+</body>
+</html>
