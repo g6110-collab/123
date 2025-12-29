@@ -1,54 +1,92 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>PNG → 엔트리용 색상 코드 (#포맷)</title>
+    <meta charset="UTF-8">
+    <title>PNG → 엔트리용 색상 코드 (#포맷)</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #output { 
+            max-height: 400px; 
+            overflow: auto; 
+            background: #f0f0f0; 
+            padding: 10px; 
+            border: 1px solid #ccc;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .controls { margin-bottom: 10px; }
+        button { padding: 5px 15px; cursor: pointer; }
+    </style>
 </head>
 <body>
-<h2>PNG 파일을 선택하세요</h2>
-<input type="file" id="fileInput" accept="image/png">
-<pre id="output" style="max-height:500px; overflow:auto; background:#f0f0f0;"></pre>
+    <h2>PNG 파일을 선택하세요</h2>
+    
+    <div class="controls">
+        <input type="file" id="fileInput" accept="image/png">
+        <button id="copyBtn">복사하기</button>
+    </div>
 
-<script>
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    <pre id="output">결과가 여기에 표시됩니다...</pre>
 
-    const img = new Image();
-    const reader = new FileReader();
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const output = document.getElementById('output');
+        const copyBtn = document.getElementById('copyBtn');
 
-    reader.onload = function(evt) {
-        img.src = evt.target.result;
-    };
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    img.onload = function() {
-        const W = img.width;
-        const H = img.height;
-        const canvas = document.createElement('canvas');
-        canvas.width = W;
-        canvas.height = H;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+            const img = new Image();
+            const reader = new FileReader();
 
-        let result = `W=${W};H=${H};\n`;
-        for (let y = 0; y < H; y++) {
-            let row = [];
-            for (let x = 0; x < W; x++) {
-                const p = ctx.getImageData(x, y, 1, 1).data;
-                const hex = '#' + 
-                    p[0].toString(16).padStart(2,'0') +
-                    p[1].toString(16).padStart(2,'0') +
-                    p[2].toString(16).padStart(2,'0');
-                row.push(hex.toUpperCase());
-            }
-            result += row.join(' ') + '\n';
-        }
+            reader.onload = function(evt) {
+                img.src = evt.target.result;
+            };
 
-        document.getElementById('output').textContent = result;
-    };
+            img.onload = function() {
+                const W = img.width;
+                const H = img.height;
+                const canvas = document.createElement('canvas');
+                canvas.width = W;
+                canvas.height = H;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
 
-    reader.readAsDataURL(file);
-});
-</script>
+                let result = `W=${W};H=${H};\n`;
+                
+                // 성능 개선을 위해 getImageData를 한 번만 호출합니다.
+                const imageData = ctx.getImageData(0, 0, W, H).data;
+
+                for (let y = 0; y < H; y++) {
+                    let row = [];
+                    for (let x = 0; x < W; x++) {
+                        const index = (y * W + x) * 4;
+                        const r = imageData[index].toString(16).padStart(2, '0');
+                        const g = imageData[index + 1].toString(16).padStart(2, '0');
+                        const b = imageData[index + 2].toString(16).padStart(2, '0');
+                        const hex = '#' + r + g + b;
+                        row.push(hex.toUpperCase());
+                    }
+                    result += row.join(' ') + '\n';
+                }
+                output.textContent = result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 복사 기능 구현
+        copyBtn.addEventListener('click', function() {
+            const textToCopy = output.textContent;
+            
+            // navigator.clipboard API 사용 (최신 브라우저 권장)
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('색상 코드가 클립보드에 복사되었습니다!');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                alert('복사에 실패했습니다. 수동으로 선택하여 복사해주세요.');
+            });
+        });
+    </script>
 </body>
 </html>
