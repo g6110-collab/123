@@ -2,39 +2,40 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>PNG → 엔트리 8자리 코드 변환기</title>
+    <title>엔트리 인스타용 변환기 (64x64)</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { color: #3273e6; border-bottom: 2px solid #3273e6; padding-bottom: 10px; }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #fafafa; color: #262626; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border: 1px solid #dbdbdb; border-radius: 3px; }
+        h2 { text-align: center; font-size: 24px; margin-bottom: 20px; color: #262626; }
         #output { 
-            width: 100%; height: 300px; overflow: auto; background: #222; color: #adff2f;
-            padding: 15px; border: 1px solid #ccc; white-space: pre-wrap; word-break: break-all;
-            font-family: 'Consolas', monospace; font-size: 11px; margin-top: 10px;
+            width: 100%; height: 250px; overflow: auto; background: #f8f9fa; 
+            padding: 15px; border: 1px solid #dbdbdb; white-space: pre-wrap; 
+            word-break: break-all; font-family: monospace; font-size: 10px; margin-top: 15px;
         }
-        .controls { margin: 20px 0; display: flex; align-items: center; gap: 10px; }
-        input[type="file"] { flex-grow: 1; }
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        input[type="file"] { border: 1px solid #dbdbdb; padding: 10px; border-radius: 5px; width: 100%; box-sizing: border-box; }
         button { 
-            padding: 10px 20px; cursor: pointer; background: #3273e6; color: white; 
-            border: none; border-radius: 5px; font-weight: bold; transition: 0.3s;
+            padding: 12px; cursor: pointer; background: #0095f6; color: white; 
+            border: none; border-radius: 5px; font-weight: bold; font-size: 14px;
         }
-        button:hover { background: #2556b5; }
-        .info { font-size: 0.9em; color: #666; margin-bottom: 5px; }
+        button:hover { background: #1877f2; }
+        .info { font-size: 0.85em; color: #8e8e8e; text-align: center; }
+        .status { font-weight: bold; color: #0095f6; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🖼️ 엔트리용 이미지 코드 변환기 (8자리)</h2>
-    <p class="info">이미지는 비율을 유지하며 최대 200px 크기로 자동 조절됩니다.</p>
+    <h2>Instagram Code Gen</h2>
+    <p class="info">사진을 선택하면 엔트리용 <b>64x64</b> 코드로 자동 변환됩니다.</p>
     
     <div class="controls">
         <input type="file" id="fileInput" accept="image/png, image/jpeg">
-        <button id="copyBtn">코드 복사하기</button>
+        <button id="copyBtn">변환된 코드 복사하기</button>
     </div>
     
-    <div id="sizeInfo" class="info">파일을 선택하면 여기에 정보가 표시됩니다.</div>
-    <pre id="output">변환된 코드가 여기에 표시됩니다...</pre>
+    <div id="sizeInfo" class="status">이미지를 대기 중...</div>
+    <pre id="output">이곳의 코드를 복사하여 엔트리 리스트에 붙여넣으세요.</pre>
 </div>
 
 <script>
@@ -44,7 +45,7 @@
     const sizeInfo = document.getElementById('sizeInfo');
 
     fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0]; // 파일 선택 오류 수정
+        const file = e.target.files[0];
         if (!file) return;
 
         const img = new Image();
@@ -57,66 +58,51 @@
         img.onload = function() {
             let W = img.width;
             let H = img.height;
-            const MAX_SIZE = 200;
+            const TARGET_SIZE = 64; // 인스타 최적화 크기
 
-            // 1. 비율 유지 리사이징 로직
-            if (W > MAX_SIZE || H > MAX_SIZE) {
-                const ratio = Math.min(MAX_SIZE / W, MAX_SIZE / H);
-                W = Math.floor(W * ratio);
-                H = Math.floor(H * ratio);
-            }
+            // 비율 유지하며 64px 맞추기
+            const ratio = Math.min(TARGET_SIZE / W, TARGET_SIZE / H);
+            W = Math.floor(W * ratio);
+            H = Math.floor(H * ratio);
 
-            sizeInfo.innerHTML = `<strong>변환 크기:</strong> ${W} x ${H} <span style="color:#999;">(원본: ${img.width}x${img.height})</span>`;
+            sizeInfo.textContent = `✅ 64x64 최적화 완료 (${W}x${H})`;
 
             const canvas = document.createElement('canvas');
             canvas.width = W;
             canvas.height = H;
             const ctx = canvas.getContext('2d');
             
-            // 이미지 품질 설정
+            // 이미지 품질 설정 (픽셀 아트 느낌 유지)
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, W, H);
 
             const imageData = ctx.getImageData(0, 0, W, H).data;
             
-            // 2. 엔트리 변수/리스트 구조에 맞게 텍스트 생성
-            // W=가로;H=세로; 정보를 첫 줄에 넣어 파싱하기 쉽게 구성
-            let result = `W=${W};H=${H};\n`;
+            // 엔트리 파싱용 헤더 포함
+            let result = `W=${W};H=${H};`;
 
-            for (let y = 0; y < H; y++) {
-                let row = [];
-                for (let x = 0; x < W; x++) {
-                    const index = (y * W + x) * 4;
-                    
-                    const r = imageData[index].toString(16).padStart(2, '0').toUpperCase();
-                    const g = imageData[index + 1].toString(16).padStart(2, '0').toUpperCase();
-                    const b = imageData[index + 2].toString(16).padStart(2, '0').toUpperCase();
-                    const a = imageData[index + 3].toString(16).padStart(2, '0').toUpperCase();
-
-                    // 8자리 RGBA 포맷 (#RRGGBBAA)
-                    row.push(`#${r}${g}${b}${a}`);
-                }
-                // 엔트리에서 '리스트'에 넣을 경우 각 행을 공백으로 구분
-                result += row.join(' ') + '\n';
+            for (let i = 0; i < imageData.length; i += 4) {
+                const r = imageData[i].toString(16).padStart(2, '0').toUpperCase();
+                const g = imageData[i+1].toString(16).padStart(2, '0').toUpperCase();
+                const b = imageData[i+2].toString(16).padStart(2, '0').toUpperCase();
+                const a = imageData[i+3].toString(16).padStart(2, '0').toUpperCase();
+                
+                // 각 픽셀을 공백으로 구분하여 나열
+                result += `#${r}${g}${b}${a} `;
             }
-            output.textContent = result;
+            
+            output.textContent = result.trim();
         };
         reader.readAsDataURL(file);
     });
 
-    // 클립보드 복사 기능
     copyBtn.addEventListener('click', function() {
-        const textToCopy = output.textContent;
-        if (textToCopy.includes('변환된 코드')) {
-            alert('먼저 이미지를 선택해 주세요.');
-            return;
-        }
+        const text = output.textContent;
+        if (text.length < 50) return alert('이미지를 먼저 선택해주세요!');
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert('코드가 클립보드에 복사되었습니다!\n엔트리의 변수나 리스트에 붙여넣으세요.');
-        }).catch(err => {
-            alert('복사 실패: ' + err);
+        navigator.clipboard.writeText(text).then(() => {
+            alert('복사 성공! 엔트리 리스트 항목에 붙여넣으세요.');
         });
     });
 </script>
